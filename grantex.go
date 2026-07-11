@@ -14,6 +14,7 @@ package grantex
 import (
 	"context"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -42,6 +43,8 @@ type Client struct {
 	Credentials       *CredentialsService
 	Passports         *PassportsService
 	Vault             *VaultService
+	DPDP              *DPDPService
+	Commerce          *CommerceService
 
 	http *httpClient
 }
@@ -62,9 +65,9 @@ func NewClient(apiKey string, opts ...Option) *Client {
 	}
 
 	h := &httpClient{
-		baseURL:    cfg.baseURL,
-		apiKey:     apiKey,
-		client:     hc,
+		baseURL:       cfg.baseURL,
+		apiKey:        strings.TrimSpace(apiKey),
+		client:        hc,
 		maxRetries:    cfg.maxRetries,
 		maxRetriesSet: cfg.maxRetriesSet,
 	}
@@ -90,6 +93,8 @@ func NewClient(apiKey string, opts ...Option) *Client {
 	c.Credentials = &CredentialsService{http: h}
 	c.Passports = &PassportsService{http: h}
 	c.Vault = &VaultService{http: h}
+	c.DPDP = &DPDPService{http: h}
+	c.Commerce = &CommerceService{http: h}
 
 	return c
 }
@@ -110,9 +115,9 @@ func Signup(ctx context.Context, params SignupParams, opts ...Option) (*SignupRe
 	}
 
 	h := &httpClient{
-		baseURL:    cfg.baseURL,
-		apiKey:     "",
-		client:     hc,
+		baseURL:       cfg.baseURL,
+		apiKey:        "",
+		client:        hc,
 		maxRetries:    cfg.maxRetries,
 		maxRetriesSet: cfg.maxRetriesSet,
 	}
