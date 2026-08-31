@@ -1,5 +1,7 @@
 package grantex
 
+import "encoding/json"
+
 // --- Rate Limits ---
 
 // RateLimit contains rate limit metadata parsed from response headers.
@@ -38,37 +40,74 @@ type RotateKeyResponse struct {
 
 // Agent represents a registered agent.
 type Agent struct {
-	ID          string   `json:"id"`
-	DID         string   `json:"did"`
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Scopes      []string `json:"scopes"`
-	Status      string   `json:"status"`
-	DeveloperID string   `json:"developerId"`
-	CreatedAt   string   `json:"createdAt"`
-	UpdatedAt   string   `json:"updatedAt"`
+	ID                   string                 `json:"agentId"`
+	DID                  string                 `json:"did"`
+	Name                 string                 `json:"name"`
+	Description          string                 `json:"description"`
+	Scopes               []string               `json:"scopes"`
+	Status               string                 `json:"status"`
+	DeveloperID          string                 `json:"developerId"`
+	CreatedAt            string                 `json:"createdAt"`
+	UpdatedAt            string                 `json:"updatedAt"`
+	RedirectURIs         []string               `json:"redirectUris,omitempty"`
+	ResourceServers      []string               `json:"resourceServers,omitempty"`
+	PublicJWK            map[string]interface{} `json:"publicJwk,omitempty"`
+	KeyThumbprint        string                 `json:"keyThumbprint,omitempty"`
+	KeyBindingConfigured bool                   `json:"keyBindingConfigured,omitempty"`
 }
 
 // RegisterAgentParams are the parameters for registering an agent.
 type RegisterAgentParams struct {
-	Name        string   `json:"name"`
-	Description string   `json:"description"`
-	Scopes      []string `json:"scopes"`
+	Name            string                 `json:"name"`
+	Description     string                 `json:"description,omitempty"`
+	Scopes          []string               `json:"scopes,omitempty"`
+	RedirectURIs    []string               `json:"redirectUris,omitempty"`
+	ResourceServers []string               `json:"resourceServers,omitempty"`
+	PublicJWK       map[string]interface{} `json:"publicJwk,omitempty"`
 }
 
 // UpdateAgentParams are the parameters for updating an agent.
 type UpdateAgentParams struct {
-	Name        *string  `json:"name,omitempty"`
-	Description *string  `json:"description,omitempty"`
-	Scopes      []string `json:"scopes,omitempty"`
+	Name            *string                `json:"name,omitempty"`
+	Description     *string                `json:"description,omitempty"`
+	Scopes          []string               `json:"scopes,omitempty"`
+	Status          *string                `json:"status,omitempty"`
+	RedirectURIs    []string               `json:"redirectUris,omitempty"`
+	ResourceServers []string               `json:"resourceServers,omitempty"`
+	PublicJWK       map[string]interface{} `json:"publicJwk,omitempty"`
+}
+
+// MarshalJSON preserves the distinction between an omitted scopes update
+// (nil) and an explicit request to clear all scopes (an empty, non-nil slice).
+func (p UpdateAgentParams) MarshalJSON() ([]byte, error) {
+	payload := make(map[string]interface{}, 7)
+	if p.Name != nil {
+		payload["name"] = *p.Name
+	}
+	if p.Description != nil {
+		payload["description"] = *p.Description
+	}
+	if p.Scopes != nil {
+		payload["scopes"] = p.Scopes
+	}
+	if p.Status != nil {
+		payload["status"] = *p.Status
+	}
+	if p.RedirectURIs != nil {
+		payload["redirectUris"] = p.RedirectURIs
+	}
+	if p.ResourceServers != nil {
+		payload["resourceServers"] = p.ResourceServers
+	}
+	if p.PublicJWK != nil {
+		payload["publicJwk"] = p.PublicJWK
+	}
+	return json.Marshal(payload)
 }
 
 // ListAgentsResponse is the response from listing agents.
 type ListAgentsResponse struct {
-	Agents   []Agent `json:"agents"`
-	Total    int     `json:"total"`
-	Page     int     `json:"page"`
-	PageSize int     `json:"pageSize"`
+	Agents []Agent `json:"agents"`
 }
 
 // --- Authorization ---
@@ -83,6 +122,7 @@ type AuthorizeParams struct {
 	RedirectURI         string   `json:"redirectUri,omitempty"`
 	CodeChallenge       string   `json:"codeChallenge,omitempty"`
 	CodeChallengeMethod string   `json:"codeChallengeMethod,omitempty"`
+	State               string   `json:"state,omitempty"`
 }
 
 // AuthorizationRequest is the response from creating an authorization request.
@@ -105,12 +145,14 @@ type ExchangeTokenParams struct {
 	Code         string `json:"code"`
 	AgentID      string `json:"agentId"`
 	CodeVerifier string `json:"codeVerifier,omitempty"`
+	RedirectURI  string `json:"redirectUri,omitempty"`
 }
 
 // RefreshTokenParams are the parameters for refreshing a token.
 type RefreshTokenParams struct {
-	RefreshToken string `json:"refreshToken"`
-	AgentID      string `json:"agentId"`
+	RefreshToken   string `json:"refreshToken"`
+	AgentID        string `json:"agentId"`
+	IdempotencyKey string `json:"-"`
 }
 
 // ExchangeTokenResponse is the response from token exchange or refresh.
@@ -188,6 +230,7 @@ type VerifiedGrant struct {
 	PrincipalID     string   `json:"principalId"`
 	AgentDID        string   `json:"agentDid"`
 	DeveloperID     string   `json:"developerId"`
+	ClientID        *string  `json:"clientId,omitempty"`
 	Scopes          []string `json:"scopes"`
 	IssuedAt        int64    `json:"issuedAt"`
 	ExpiresAt       int64    `json:"expiresAt"`
@@ -200,11 +243,13 @@ type VerifiedGrant struct {
 
 // LogAuditParams are the parameters for logging an audit entry.
 type LogAuditParams struct {
-	AgentID  string                 `json:"agentId"`
-	GrantID  string                 `json:"grantId"`
-	Action   string                 `json:"action"`
-	Metadata map[string]interface{} `json:"metadata,omitempty"`
-	Status   string                 `json:"status,omitempty"`
+	AgentID     string                 `json:"agentId"`
+	AgentDID    string                 `json:"agentDid"`
+	GrantID     string                 `json:"grantId"`
+	PrincipalID string                 `json:"principalId"`
+	Action      string                 `json:"action"`
+	Metadata    map[string]interface{} `json:"metadata,omitempty"`
+	Status      string                 `json:"status,omitempty"`
 }
 
 // AuditEntry represents an audit log entry.
@@ -214,6 +259,7 @@ type AuditEntry struct {
 	AgentDID    string                 `json:"agentDid"`
 	GrantID     string                 `json:"grantId"`
 	PrincipalID string                 `json:"principalId"`
+	DeveloperID string                 `json:"developerId"`
 	Action      string                 `json:"action"`
 	Metadata    map[string]interface{} `json:"metadata"`
 	Hash        string                 `json:"hash"`
@@ -228,18 +274,23 @@ type ListAuditParams struct {
 	GrantID     string `json:"grantId,omitempty"`
 	PrincipalID string `json:"principalId,omitempty"`
 	Action      string `json:"action,omitempty"`
-	Since       string `json:"since,omitempty"`
-	Until       string `json:"until,omitempty"`
-	Page        int    `json:"page,omitempty"`
-	PageSize    int    `json:"pageSize,omitempty"`
 }
 
 // ListAuditResponse is the response from listing audit entries.
 type ListAuditResponse struct {
-	Entries  []AuditEntry `json:"entries"`
-	Total    int          `json:"total"`
-	Page     int          `json:"page"`
-	PageSize int          `json:"pageSize"`
+	Entries []AuditEntry `json:"entries"`
+}
+
+// AuditCheckpoint is a signed snapshot of the current audit-chain head.
+// An external witness is required before it is operator-independent evidence.
+type AuditCheckpoint struct {
+	CheckpointID     string `json:"checkpointId"`
+	HeadEntryID      string `json:"headEntryId"`
+	HeadHash         string `json:"headHash"`
+	HeadTimestamp    string `json:"headTimestamp"`
+	EntryCount       int    `json:"entryCount"`
+	SignedCheckpoint string `json:"signedCheckpoint"`
+	WitnessRequired  bool   `json:"witnessRequired"`
 }
 
 // --- Webhooks ---

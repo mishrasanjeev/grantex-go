@@ -5,10 +5,13 @@ Official Go SDK for the [Grantex](https://grantex.dev) delegated authorization p
 ## Installation
 
 ```bash
-go get github.com/mishrasanjeev/grantex-go
+go get github.com/mishrasanjeev/grantex-go@v0.2.0
 ```
 
 Requires Go 1.26.1 or newer, matching the module's `go.mod` directive.
+
+Version `v0.2.0` includes corrected Agent and Audit API contracts plus developer,
+principal, and ES256 DPoP agent clients for layered prepaid-wallet governance.
 
 ## Quick Start
 
@@ -97,6 +100,53 @@ client := grantex.NewClient("api-key",
 | `client.Vault` | Store, List, Get, Delete, Exchange |
 | `client.DPDP` | Consent records/notices, grievances, erasure, principal records, exports |
 | `client.Commerce` | GetProfile, SearchCatalog, CreateCart, CreatePaymentIntent, CreateCheckoutLink, GetOpsHealth |
+| `client.WalletSpendPolicies` | Create, List, SetStatus for developer-level wallet policy |
+
+## Agent prepaid wallets (v0.2.0+)
+
+```go
+key, err := grantex.GenerateDPoPKey()
+if err != nil {
+    log.Fatal(err)
+}
+agentWallets, err := grantex.NewAgentPrepaidWalletClient(
+    accessToken,
+    key,
+    "https://grantex.dev/v1/prepaid-wallets",
+)
+if err != nil {
+    log.Fatal(err)
+}
+
+authorization, err := agentWallets.AuthorizePayment(ctx, grantex.PrepaidAuthorizationRequest{
+    Amount:            "2500",
+    Asset:             "USDC",
+    Network:           "grantex:prepaid",
+    Recipient:         "merchant:data-api",
+    Resource:          "https://merchant.example/data",
+    Scope:             "data:read",
+    MerchantID:        "merchant:data-api",
+    Purpose:           "research",
+    MaxTimeoutSeconds: 120,
+    IdempotencyKey:    logicalPaymentID,
+})
+
+principal, err := grantex.NewPrincipalPrepaidWalletClient(sessionToken)
+if err != nil {
+    log.Fatal(err)
+}
+if authorization.Status == "approval_required" {
+    _, err = principal.DecidePaymentApproval(
+        ctx, authorization.ApprovalRequestID, "approved", "Exact request reviewed",
+    )
+}
+```
+
+The agent client creates a fresh ES256 DPoP proof bound to the access token,
+method, and exact URL. Principal methods cover wallets, safe-default assignment,
+reload controls, layered policies, exact approvals, activity, and stop controls.
+Grantex does not replace issuer KYC, sanctions, custody, network authorization,
+settlement, dispute, or reconciliation systems.
 
 ## Commerce V1 / OACP
 
@@ -160,3 +210,7 @@ Full documentation at [docs.grantex.dev](https://docs.grantex.dev).
 ## License
 
 Apache 2.0
+
+## Ownership
+
+Grantex is owned by Orchestrum Technologies LLP. Inventor and owner: Sanjeev Kumar. Ownership contact: [sanjeev@orchestrum.in](mailto:sanjeev@orchestrum.in) or [mishra.sanjeev@gmail.com](mailto:mishra.sanjeev@gmail.com).

@@ -17,7 +17,7 @@ func TestHTTPClientGet(t *testing.T) {
 		if r.Header.Get("Authorization") != "Bearer test-key" {
 			t.Errorf("expected Bearer test-key, got %s", r.Header.Get("Authorization"))
 		}
-		if r.Header.Get("User-Agent") != "grantex-go/0.1.10" {
+		if r.Header.Get("User-Agent") != "grantex-go/0.2.0" {
 			t.Errorf("unexpected User-Agent: %s", r.Header.Get("User-Agent"))
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -246,15 +246,17 @@ func TestBuildQueryString(t *testing.T) {
 	}{
 		{"empty", map[string]string{}, ""},
 		{"nil values filtered", map[string]string{"a": "", "b": "1"}, "?b=1"},
+		{
+			"reserved characters encoded",
+			map[string]string{"principalId": "user+ops@example.com", "action": "data:read&export=true"},
+			"?action=data%3Aread%26export%3Dtrue&principalId=user%2Bops%40example.com",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := buildQueryString(tt.params)
-			if tt.want == "" && got != "" {
-				t.Errorf("expected empty, got %s", got)
-			}
-			if tt.want != "" && got == "" {
-				t.Errorf("expected %s, got empty", tt.want)
+			if got != tt.want {
+				t.Errorf("expected %q, got %q", tt.want, got)
 			}
 		})
 	}
