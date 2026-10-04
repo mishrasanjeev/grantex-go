@@ -54,6 +54,10 @@ type Agent struct {
 	PublicJWK            map[string]interface{} `json:"publicJwk,omitempty"`
 	KeyThumbprint        string                 `json:"keyThumbprint,omitempty"`
 	KeyBindingConfigured bool                   `json:"keyBindingConfigured,omitempty"`
+	// Lifecycle metadata: when the status last changed, the reason given, and when the agent was retired.
+	StatusChangedAt      *string                `json:"statusChangedAt,omitempty"`
+	StatusReason         *string                `json:"statusReason,omitempty"`
+	RetiredAt            *string                `json:"retiredAt,omitempty"`
 }
 
 // RegisterAgentParams are the parameters for registering an agent.
@@ -64,6 +68,8 @@ type RegisterAgentParams struct {
 	RedirectURIs    []string               `json:"redirectUris,omitempty"`
 	ResourceServers []string               `json:"resourceServers,omitempty"`
 	PublicJWK       map[string]interface{} `json:"publicJwk,omitempty"`
+	// Lifecycle state at registration: "draft" (registered, not yet usable) or "active" (the default).
+	Status          string                 `json:"status,omitempty"`
 }
 
 // UpdateAgentParams are the parameters for updating an agent.
@@ -72,6 +78,7 @@ type UpdateAgentParams struct {
 	Description     *string                `json:"description,omitempty"`
 	Scopes          []string               `json:"scopes,omitempty"`
 	Status          *string                `json:"status,omitempty"`
+	StatusReason    *string                `json:"statusReason,omitempty"`
 	RedirectURIs    []string               `json:"redirectUris,omitempty"`
 	ResourceServers []string               `json:"resourceServers,omitempty"`
 	PublicJWK       map[string]interface{} `json:"publicJwk,omitempty"`
@@ -80,7 +87,7 @@ type UpdateAgentParams struct {
 // MarshalJSON preserves the distinction between an omitted scopes update
 // (nil) and an explicit request to clear all scopes (an empty, non-nil slice).
 func (p UpdateAgentParams) MarshalJSON() ([]byte, error) {
-	payload := make(map[string]interface{}, 7)
+	payload := make(map[string]interface{}, 8)
 	if p.Name != nil {
 		payload["name"] = *p.Name
 	}
@@ -92,6 +99,9 @@ func (p UpdateAgentParams) MarshalJSON() ([]byte, error) {
 	}
 	if p.Status != nil {
 		payload["status"] = *p.Status
+	}
+	if p.StatusReason != nil {
+		payload["statusReason"] = *p.StatusReason
 	}
 	if p.RedirectURIs != nil {
 		payload["redirectUris"] = p.RedirectURIs
@@ -115,6 +125,9 @@ type ListAgentsResponse struct {
 // AuthorizeParams are the parameters for creating an authorization request.
 type AuthorizeParams struct {
 	Audience            string   `json:"audience,omitempty"`
+	// DataRegion is the region the grant's data may be processed in ("in", "eu", ...),
+	// carried in the token's urn:grantex:tools:v1 entries.
+	DataRegion          string   `json:"dataRegion,omitempty"`
 	AgentID             string   `json:"agentId"`
 	PrincipalID         string   `json:"principalId"`
 	Scopes              []string `json:"scopes"`
@@ -136,6 +149,9 @@ type AuthorizationRequest struct {
 	ExpiresAt     string   `json:"expiresAt"`
 	Status        string   `json:"status"`
 	CreatedAt     string   `json:"createdAt"`
+	// Purpose and DataRegion are present when the request binds the grant to them.
+	Purpose       string   `json:"purpose,omitempty"`
+	DataRegion    string   `json:"dataRegion,omitempty"`
 }
 
 // --- Tokens ---
@@ -858,6 +874,7 @@ type SsoLdapCallbackParams struct {
 // SsoCallbackResult is the result from an enterprise SSO callback (OIDC, SAML, or LDAP).
 type SsoCallbackResult struct {
 	SessionID    string   `json:"sessionId"`
+	SessionToken string   `json:"sessionToken,omitempty"`
 	Email        *string  `json:"email"`
 	Name         *string  `json:"name"`
 	Sub          *string  `json:"sub"`
