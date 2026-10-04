@@ -1,6 +1,7 @@
 # Grantex Go SDK
 
-Version v0.4.2 adds opt-in per-invocation current-authority checks and trusted
+Version v0.4.3 adds typed DPDP client responses. Version v0.4.2 adds opt-in
+per-invocation current-authority checks and trusted
 principal/agent binding. Offline defaults remain unchanged. Verify public
 module availability before upgrading; see the execution-authority guide below.
 
@@ -28,7 +29,7 @@ Official Go SDK for the [Grantex](https://grantex.dev) delegated authorization p
 ## Installation
 
 ```bash
-go get github.com/mishrasanjeev/grantex-go@v0.4.2
+go get github.com/mishrasanjeev/grantex-go@latest
 ```
 
 Requires Go 1.26.1 or newer, matching the module's `go.mod` directive.
@@ -112,6 +113,13 @@ client := grantex.NewClient("api-key",
 | `client.Anomalies` | Detect, List, Acknowledge |
 | `client.SCIM` | CreateToken, ListTokens, RevokeToken, ListUsers, GetUser, CreateUser, ReplaceUser, UpdateUser, DeleteUser |
 | `client.SSO` | Enterprise connections, enforcement, sessions, login, OIDC/SAML/LDAP callbacks, and legacy config methods |
+
+The repository source adds optional `SsoCallbackResult.SessionToken`; a
+subsequent module release is needed for consumers to receive this field. The
+server returns it only when human SSO sessions are enabled. It is an opaque
+bearer credential, not the audit `SessionID`; keep it secret. Hosted dashboard
+login currently uses OIDC, and enforcement does not revoke machine API keys.
+See the [enterprise SSO guide](https://docs.grantex.dev/guides/enterprise-sso).
 | `client.PrincipalSessions` | Create |
 | `client.Budgets` | Allocate, Debit, Balance, Allocations, Transactions |
 | `client.Events` | Stream |
@@ -252,7 +260,7 @@ Apache 2.0
 ## Ownership
 
 Grantex is owned by Orchestrum Technologies LLP. Inventor and owner: Sanjeev Kumar. Ownership contact: [sanjeev@orchestrum.in](mailto:sanjeev@orchestrum.in) or [mishra.sanjeev@gmail.com](mailto:mishra.sanjeev@gmail.com).
-> Unreleased source: `Grants.Verify` and `VerifyOptions.CurrentAuthority` add
+> Released in v0.4.2: `Grants.Verify` and `VerifyOptions.CurrentAuthority` add
 > per-operation issuer authority with trusted principal/agent binding. This is
 > not a Go manifest/decision/caps enforcement engine. See the
 > [SDK execution authority guide](https://docs.grantex.dev/guides/sdk-execution-authority).

@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-const sdkVersion = "0.4.2"
+const sdkVersion = "0.4.3"
 
 func parseRateLimitHeaders(header http.Header) *RateLimit {
 	limitStr := header.Get("X-RateLimit-Limit")
@@ -95,6 +95,12 @@ func (h *httpClient) postWithHeaders(ctx context.Context, path string, body inte
 // 5xx would replay the code, and the server rejects the second use.
 func (h *httpClient) postNoRetry(ctx context.Context, path string, body interface{}) ([]byte, error) {
 	return h.do(ctx, http.MethodPost, path, body, nil, 0)
+}
+
+// patchNoRetry issues exactly one PATCH, for non-idempotent updates whose
+// replay after a timeout or 5xx could apply twice or fail spuriously.
+func (h *httpClient) patchNoRetry(ctx context.Context, path string, body interface{}) ([]byte, error) {
+	return h.do(ctx, http.MethodPatch, path, body, nil, 0)
 }
 
 func (h *httpClient) doWithHeaders(ctx context.Context, method, path string, body interface{}, headers map[string]string) ([]byte, error) {
